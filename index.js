@@ -186,21 +186,23 @@ class GeohashStream extends Stream.Readable {
       if (this.originalShape.geometry.type === "LineString") {
         const lineSegments = turfLineSplit(this.originalShape, rowPolygon).features
 
-        let evenPairs
-        const firstPointOfFirstSegment = lineSegments[0].geometry.coordinates[0]
-        if (turfBooleanPointInPolygon(firstPointOfFirstSegment, rowPolygon)) {
-          evenPairs = true
-        } else {
-          evenPairs = false
+        if (lineSegments.length){
+          let evenPairs
+          const firstPointOfFirstSegment = lineSegments[0].geometry.coordinates[0]
+          if (turfBooleanPointInPolygon(firstPointOfFirstSegment, rowPolygon)) {
+            evenPairs = true
+          } else {
+            evenPairs = false
+          }
+          // Filter for line segments that are inside the row polygon
+          // Put an envelope around the segment and get geohashes
+          lineSegments
+            .filter((p, i) => (evenPairs ? i % 2 == 0 : i % 2 == 1))
+            .forEach(lineSegment => {
+              const lineSegmentEnvelope = turfEnvelope(lineSegment).geometry.coordinates
+              geohashes.push(...this.processRowSegment(lineSegmentEnvelope))
+            })
         }
-        // Filter for line segments that are inside the row polygon
-        // Put an envelope around the segment and get geohashes
-        lineSegments
-          .filter((p, i) => (evenPairs ? i % 2 == 0 : i % 2 == 1))
-          .forEach(lineSegment => {
-            const lineSegmentEnvelope = turfEnvelope(lineSegment).geometry.coordinates
-            geohashes.push(...this.processRowSegment(lineSegmentEnvelope))
-          })
       } else {
         // Its a Polygon
         // Calculate the intersection between the row and the original polygon
